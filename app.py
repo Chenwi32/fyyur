@@ -109,18 +109,6 @@ def show_venue(venue_id):
   # shows the venue page with the given venue_id
   # TODO: replace with real venue data from the venues table, using venue_id
   data1={
-    "id": 1,
-    "name": "The Musical Hop",
-    "genres": ["Jazz", "Reggae", "Swing", "Classical", "Folk"],
-    "address": "1015 Folsom Street",
-    "city": "San Francisco",
-    "state": "CA",
-    "phone": "123-123-1234",
-    "website": "https://www.themusicalhop.com",
-    "facebook_link": "https://www.facebook.com/TheMusicalHop",
-    "seeking_talent": True,
-    "seeking_description": "We are on the lookout for a local artist to play every two weeks. Please call us.",
-    "image_link": "https://images.unsplash.com/photo-1543900694-133f37abaaa5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=400&q=60",
     "past_shows": [{
       "artist_id": 4,
       "artist_name": "Guns N Petals",
@@ -131,35 +119,16 @@ def show_venue(venue_id):
     "past_shows_count": 1,
     "upcoming_shows_count": 0,
   }
+
+
+
   data2={
-    "id": 2,
-    "name": "The Dueling Pianos Bar",
-    "genres": ["Classical", "R&B", "Hip-Hop"],
-    "address": "335 Delancey Street",
-    "city": "New York",
-    "state": "NY",
-    "phone": "914-003-1132",
-    "website": "https://www.theduelingpianos.com",
-    "facebook_link": "https://www.facebook.com/theduelingpianos",
-    "seeking_talent": False,
-    "image_link": "https://images.unsplash.com/photo-1497032205916-ac775f0649ae?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=750&q=80",
     "past_shows": [],
     "upcoming_shows": [],
     "past_shows_count": 0,
     "upcoming_shows_count": 0,
   }
   data3={
-    "id": 3,
-    "name": "Park Square Live Music & Coffee",
-    "genres": ["Rock n Roll", "Jazz", "Classical", "Folk"],
-    "address": "34 Whiskey Moore Ave",
-    "city": "San Francisco",
-    "state": "CA",
-    "phone": "415-000-1234",
-    "website": "https://www.parksquarelivemusicandcoffee.com",
-    "facebook_link": "https://www.facebook.com/ParkSquareLiveMusicAndCoffee",
-    "seeking_talent": False,
-    "image_link": "https://images.unsplash.com/photo-1485686531765-ba63b07845a7?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=747&q=80",
     "past_shows": [{
       "artist_id": 5,
       "artist_name": "Matt Quevedo",
@@ -185,7 +154,10 @@ def show_venue(venue_id):
     "past_shows_count": 1,
     "upcoming_shows_count": 1,
   }
-  data = list(filter(lambda d: d['id'] == venue_id, [data1, data2, data3]))[0]
+
+  data = Venue.query.all()
+
+  #data = list(filter(lambda d: d['id'] == venue_id, [data1, data2, data3]))[0]
   return render_template('pages/show_venue.html', venue=data)
 
 #  Create Venue
@@ -201,7 +173,7 @@ def create_venue_submission():
   # TODO: insert form data as a new Venue record in the db, instead
   body = {}
   try:
-    data = VenueForm()
+    data = VenueForm(request.form)
 
     venue = Venue(
       name=data.name.data ,
@@ -245,10 +217,10 @@ def create_venue_submission():
   # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
   return render_template('pages/home.html')
 
-@app.route('/venues/<venue_id>', methods=['DELETE'])
+@app.route('/venues/delete/<venue_id>', methods=['DELETE'])
 def delete_venue(venue_id):
   try:
-    venue = Shows.query.filter_by(Shows.venue_id == venue_id).first()
+    venue = Venue.query.filter_by(Venue.venue_id == venue_id).first()
     db.session.delete(venue)
     db.session.commit()
 
@@ -301,7 +273,7 @@ def search_artists():
 def show_artist(artist_id):
   # shows the artist page with the given artist_id
   # TODO: replace with real artist data from the artist table, using artist_id
-          data1={
+    data1={
       "id": 4,
       "name": "Guns N Petals",
       "genres": ["Rock n Roll"],
@@ -323,7 +295,7 @@ def show_artist(artist_id):
       "past_shows_count": 1,
       "upcoming_shows_count": 0,
     }
-          data2={
+    data2={
       "id": 5,
       "name": "Matt Quevedo",
       "genres": ["Jazz"],
@@ -343,7 +315,7 @@ def show_artist(artist_id):
       "past_shows_count": 1,
       "upcoming_shows_count": 0,
     }
-          data3={
+    data3={
       "id": 6,
       "name": "The Wild Sax Band",
       "genres": ["Jazz", "Classical"],
@@ -372,8 +344,10 @@ def show_artist(artist_id):
       "past_shows_count": 0,
       "upcoming_shows_count": 3,
     }
-          data = list(filter(lambda d: d['id'] == artist_id, [data1, data2, data3]))[0]
-          return render_template('pages/show_artist.html', artist=data)
+    data = list(filter(lambda d: d['id'] == artist_id, [data1, data2, data3]))[0]
+    return render_template('pages/show_artist.html', artist=data)
+
+    
 
 #  Update
 #  ----------------------------------------------------------------
@@ -444,7 +418,7 @@ def create_artist_submission():
   # TODO: insert form data as a new Venue record in the db, instead
   body = {}
   try:
-    data = ArtistForm()
+    data = ArtistForm(request.form)
 
     artist = Artist(
     name=data.name.data,
