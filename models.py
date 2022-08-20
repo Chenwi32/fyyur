@@ -1,8 +1,11 @@
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import MetaData
 
 
 
 db = SQLAlchemy()
+
+metadata_object = MetaData()
 
 # Models.
 #----------------------------------------------------------------------------#
@@ -41,16 +44,13 @@ class Artist(db.Model):
 
 
 
-class Shows(db.Model):
-    __tablename__ = 'shows'
-
-    id = db.Column(db.Integer, primary_key=True)
-    artist_id = db.Column(db.String(120))
-    venue_id = db.Column(db.String(120))
+    shows = db.Table('shows', metadata_object ,
+    artist_id = db.Column('artist', db.Integer, db.ForeignKey('artist.id'), primary_key=True),
+    venue_id = db.Column('venue', db.Integer, db.ForeignKey('venue.id'), primary_key=True),
     start_time = db.Column(db.DateTime)
+    )
 
-
-
+    
 
 
 
