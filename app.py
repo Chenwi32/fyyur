@@ -3,6 +3,7 @@
 #----------------------------------------------------------------------------#
 
 import json
+from os import abort
 import dateutil.parser
 import babel
 from flask import Flask, jsonify, render_template, request, Response, flash, redirect, url_for
@@ -12,7 +13,7 @@ from logging import Formatter, FileHandler
 from flask_wtf import Form
 from pytz import timezone
 from requests import session
-from sqlalchemy import null, or_
+from sqlalchemy import  or_
 from forms import *
 
 from flask_migrate import Migrate
@@ -186,7 +187,7 @@ def create_venue_form():
 @app.route('/venues/create', methods=['POST'])
 def create_venue_submission():
   # TODO: insert form data as a new Venue record in the db, instead
-  body = {}
+  error = False
   try:
     data = VenueForm(request.form)
 
@@ -206,18 +207,8 @@ def create_venue_submission():
     db.session.add(venue)
     db.session.commit()
 
-    body['name'] = venue.name
-    body['city'] = venue.city
-    body['state'] = venue.state
-    body['address'] = venue.address
-    body['phone'] = venue.phone
-    body['image_link'] = venue.image_link
-    body['facebook_link'] = venue.facebook_link
-    body['genres'] = venue.genres
-    body['website_link'] = venue.website_link
-    body['seeking_talent'] = venue.seeking_talent
-    body['seeking_description'] = venue.seeking_description
   except:
+    error = True
     db.session.rollback()
 
   finally:
@@ -226,47 +217,59 @@ def create_venue_submission():
     
 
   # on successful db insert, flash success
-  flash('Venue ' + request.form['name'] + ' was successfully listed!')
+  if not error:
+    flash('Venue ' + request.form.get('name') + ' was successfully listed!')
   # TODO: on unsuccessful db insert, flash an error instead.
-  # e.g., flash('An error occurred. Venue ' + data.name + ' could not be listed.')
+
+  else:
+    flash('Something went wrong. Venue ' + request.form.get('name' + ' could not be listed'))
+    abort(500)
+  
   # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
   return render_template('pages/home.html')
 
 @app.route('/venues/delete/<venue_id>', methods=['DELETE'])
 def delete_venue(venue_id):
+  error = False
   try:
     venue = Venue.query.filter_by(Venue.venue_id == venue_id).first()
     db.session.delete(venue)
     db.session.commit()
 
   except:
+    error = True
     db.session.rollback()
-    db.session.commit()
+
+  finally:
+    db.session.close()
+  
+  if not error:
+    return redirect(url_for('index'))
+
+  else:
+    abort(500)
 
   # TODO: Complete this endpoint for taking a venue_id, and using
   # SQLAlchemy ORM to delete a record. Handle cases where the session commit could fail.
 
   # BONUS CHALLENGE: Implement a button to delete a Venue on a Venue Page, have it so that
   # clicking that button delete it from the db then redirect the user to the homepage
-  return redirect(url_for('pages/venues.html'))
 
 #  Artists
 #  ----------------------------------------------------------------
 @app.route('/artists')
 def artists():
   # TODO: replace with real data returned from querying the database
-  data = Artist.query.all()
-  if not data:
-      data=[{
-        "id": 4,
-        "name": "Guns N Petals",
-        }, {
-        "id": 5,
-        "name": "Matt Quevedo",
-        }, {
-        "id": 6,
-        "name": "The Wild Sax Band",
-        }]
+  data = []
+  artists = db.session.query(Artist).order_by('id').all()
+
+  for artist in artists:
+
+    if not data:
+      data.append({
+        "id": artist.id,
+        "name": artist.name
+        })
   return render_template('pages/artists.html', artists=data)
 
 @app.route('/artists/search', methods=['POST'])
@@ -274,13 +277,14 @@ def search_artists():
   # TODO: implement search on artists with partial string search. Ensure it is case-insensitive.
   # seach for "A" should return "Guns N Petals", "Matt Quevado", and "The Wild Sax Band".
   # search for "band" should return "The Wild Sax Band".
+  
+  searchword = request.form.get('search_term')
+  search = '%{}%'.format(searchword.lower())
+  respon = Artist.query.filter(or_(Artist.name.ilike(search), Artist.state.ilike(search))).all() 
+  
   response={
-    "count": 1,
-    "data": [{
-      "id": 4,
-      "name": "Guns N Petals",
-      "num_upcoming_shows": 0,
-    }]
+    "count": len(respon),
+    "data": respon
   }
   return render_template('pages/search_artists.html', results=response, search_term=request.form.get('search_term', ''))
 
