@@ -117,55 +117,60 @@ def search_venues():
 def show_venue(venue_id):
   # shows the venue page with the given venue_id
   # TODO: replace with real venue data from the venues table, using venue_id
-  data1={
-    "past_shows": [{
-      "artist_id": 4,
-      "artist_name": "Guns N Petals",
-      "artist_image_link": "https://images.unsplash.com/photo-1549213783-8284d0336c4f?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=300&q=80",
-      "start_time": "2019-05-21T21:30:00.000Z"
-    }],
-    "upcoming_shows": [],
-    "past_shows_count": 1,
-    "upcoming_shows_count": 0,
-  }
 
 
+  venueId = db.session.query(Venue).filter(Venue.id == venue_id).all()
+  current_time = datetime.now(timezone.utc)
+  data = {}
+  down_show = []
+  up_show = []
+  for col in venueId:
+    upcoming_shows = col.shows.filter(Show.start_time > current_time).all()
 
-  data2={
-    "past_shows": [],
-    "upcoming_shows": [],
-    "past_shows_count": 0,
-    "upcoming_shows_count": 0,
-  }
-  data3={
-    "past_shows": [{
-      "artist_id": 5,
-      "artist_name": "Matt Quevedo",
-      "artist_image_link": "https://images.unsplash.com/photo-1495223153807-b916f75de8c5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=334&q=80",
-      "start_time": "2019-06-15T23:00:00.000Z"
-    }],
-    "upcoming_shows": [{
-      "artist_id": 6,
-      "artist_name": "The Wild Sax Band",
-      "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
-      "start_time": "2035-04-01T20:00:00.000Z"
-    }, {
-      "artist_id": 6,
-      "artist_name": "The Wild Sax Band",
-      "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
-      "start_time": "2035-04-08T20:00:00.000Z"
-    }, {
-      "artist_id": 6,
-      "artist_name": "The Wild Sax Band",
-      "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
-      "start_time": "2035-04-15T20:00:00.000Z"
-    }],
-    "past_shows_count": 1,
-    "upcoming_shows_count": 1,
-  }
+    past_shows = col.shows.filter(Show.start_time < current_time).all()
 
-  venueId = Venue.query.get(venue_id)
-  data = venueId.query.all()
+    data.update({
+      'id': col.id,
+      'name': col.name,
+      'genres': col.genres.split(', '),
+      'address': col.address,
+      'city': col.city,
+      'state': col.state,
+      'phone': col.phone,
+      'website_link': col.website_link,
+      'facebook_link': col.facebook_link,
+      'image_link': col.image_link,
+      'seeking_talent': col.seeking_talent,
+      'seeking_description': col.seeking_description,
+    })
+    for show in upcoming_shows:
+      if len(upcoming_shows) == 0:
+        data.update({'upcoming_shows': []})
+
+      else:
+        artists = db.session.query(Artist.name, Artist.image_link).filter(Artist.id == show.artist_id).one()
+        up_show.append({
+          'artist_id': show.artist_id,
+          'artist_name': artists.name,
+          'artist_image_link': artists.image_link,
+          'start_time': show.start_time.strftime('%m/%d/%Y')
+        })
+
+      for show in past_shows:
+        if len(past_shows) == 0 :
+          data.update({'past_shows': []})
+        else:
+          artist = db.session.query(Artist.name, Artist.image_link).filter(Artist.id == show.artist_id).one()
+          down_show.append({
+          'artist_id': show.artist_id,
+          'artist_name': artist.name,
+          'artist_image_link': artist.image_link,
+          'start_time': show.start_time.strftime("%m/%d/%Y")
+          })
+
+    data.update({'upcoming_shows': up_show})
+    data.update({'past_shows': down_show})
+    data.update({'past_shows_count': len(upcoming_shows), 'upcoming_shows_count': len(upcoming_shows)})
 
   #data = list(filter(lambda d: d['id'] == venue_id, [data1, data2, data3]))[0]
   return render_template('pages/show_venue.html', venue=data)
