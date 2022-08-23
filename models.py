@@ -1,11 +1,8 @@
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import MetaData
 
 
 
 db = SQLAlchemy()
-
-metadata_object = MetaData()
 
 # Models.
 #----------------------------------------------------------------------------#
@@ -23,8 +20,9 @@ class Venue(db.Model):
     facebook_link = db.Column(db.String(120))
     genres = db.Column(db.String(120))
     website_link = db.Column(db.String(120))
-    seeking_talent = db.Column(db.Boolean)
+    seeking_talent = db.Column(db.Boolean, server_default='false', default=False)
     seeking_description = db.Column(db.String())
+    shows = db.relationship('show', backref='venue', lazy='dynamic')
 
 
 class Artist(db.Model):
@@ -39,18 +37,14 @@ class Artist(db.Model):
     image_link = db.Column(db.String(500))
     facebook_link = db.Column(db.String(120))
     website_link = db.Column(db.String(120))
-    seeking_venue = db.Column(db.Boolean)
+    seeking_venue = db.Column(db.Boolean, server_default='false', default=False)
     seeking_description = db.Column(db.String())
+    shows = db.relationship('show', backref='artist', lazy='dynamic')
 
-
-
-    shows = db.Table('shows', metadata_object ,
-    artist_id = db.Column('artist', db.Integer, db.ForeignKey('artist.id'), primary_key=True),
-    venue_id = db.Column('venue', db.Integer, db.ForeignKey('venue.id'), primary_key=True),
-    start_time = db.Column(db.DateTime)
-    )
-
-    
-
-
-
+#---------------------------------------------------
+class Show(db.Model):
+    __tablename__ = 'show'
+    id = db.Column(db.Integer, primary_key=True)
+    venue_id = db.Column(db.Integer, db.ForeignKey('venue.id'), nullable=False)
+    artist_id = db.Column(db.Integer, db.ForeignKey('artist.id'), nullable=False)
+    start_time = db.Column(db.DateTime(timezone=True))

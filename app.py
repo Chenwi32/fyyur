@@ -10,13 +10,14 @@ from flask_moment import Moment
 import logging
 from logging import Formatter, FileHandler
 from flask_wtf import Form
+from pytz import timezone
 from requests import session
-from sqlalchemy import null
+from sqlalchemy import null, or_
 from forms import *
 
 from flask_migrate import Migrate
 
-from models import db, Venue, Artist
+from models import db, Artist, Venue, Show
 #----------------------------------------------------------------------------#
 # App Config.
 #----------------------------------------------------------------------------#
@@ -66,27 +67,35 @@ def index():
 def venues():
   # TODO: replace with real venues data.
   #       num_upcoming_shows should be aggregated based on number of upcoming shows per venue.
-  data=[{
-    "city": "San Francisco",
-    "state": "CA",
-    "venues": [{
-      "id": 1,
-      "name": "The Musical Hop",
-      "num_upcoming_shows": 0,
-    }, {
-      "id": 3,
-      "name": "Park Square Live Music & Coffee",
-      "num_upcoming_shows": 1,
-    }]
-  }, {
-    "city": "New York",
-    "state": "NY",
-    "venues": [{
-      "id": 2,
-      "name": "The Dueling Pianos Bar",
-      "num_upcoming_shows": 0,
-    }]
-  }]
+
+  data=[]
+  cities = db.session.query(Venue.city).group_by(Venue.city).all()
+  current_time = datetime.now(timezone.utc)
+  current_city = ''
+
+  for city in cities:
+    venues = db.session.query(Venue).filter(Venue.city == city[0]).order_by('id').all()
+
+    for venue in venues:
+      num_upcoming_shows = venue.shows.filter(Show.start_time > current_time).all()
+      if current_city != venue.city:
+        data.append({
+          'city': venue.city,
+          'state': venue.state,
+          'venues': [{
+            'id': venue.id,
+            'name': venue.name,
+            'num_upcoming_shows': len(num_upcoming_shows)
+          }]
+        })
+        current_city=venue.city
+      else:
+        data[len(data) - 1]['venues'].append({
+          'id': venue.id,
+          'name': venue.name,
+          'num_upcoming_shows': len(num_upcoming_shows)
+        })
+
   return render_template('pages/venues.html', areas=data);
 
 @app.route('/venues/search', methods=['POST'])
@@ -94,13 +103,13 @@ def search_venues():
   # TODO: implement search on venues with partial string search. Ensure it is case-insensitive.
   # seach for Hop should return "The Musical Hop".
   # search for "Music" should return "The Musical Hop" and "Park Square Live Music & Coffee"
+  searchword = request.form.get('search_term')
+  search = '%{}%'.fornat(searchword.lower())
+  respon = Venue.query.filter(or_(Venue.name.ilike(search), Venue.city.ilike(search), Venue.state.ilike(search))).all()
+
   response={
-    "count": 1,
-    "data": [{
-      "id": 2,
-      "name": "The Dueling Pianos Bar",
-      "num_upcoming_shows": 0,
-    }]
+    "count": len(respon),
+    "data": respon
   }
   return render_template('pages/search_venues.html', results=response, search_term=request.form.get('search_term', ''))
 
